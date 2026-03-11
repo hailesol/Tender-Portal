@@ -1,4 +1,5 @@
 let resumeUrl = "";
+let lastMessage = "";
 
 // ---- Activity log ----
 function log(message){
@@ -35,7 +36,11 @@ function updateStatus(message, file){
     if(statusText) statusText.innerText = message || "No status";
     if(fileName) fileName.innerText = file || "No active folder";
 
-    log(message);
+    // Only log if message changed to avoid duplicates
+    if(message && message !== lastMessage){
+        log(message);
+        lastMessage = message;
+    }
 }
 
 // ---- Continue workflow ----
@@ -66,23 +71,23 @@ function abortWorkflow(){
 updateStatus("Waiting for workflow...", "No active folder");
 setStage(0);
 
-// ---- Poll n8n Portal Status API ----
+// ---- Poll n8n Portal GET Workflow ----
 async function checkWorkflow(){
     try {
-        const response = await fetch("https://hailesiq.app.n8n.cloud/webhook/portal-status"); // GET workflow URL
+        const response = await fetch("https://hailesiq.app.n8n.cloud/webhook/portal-status"); // Replace with your GET workflow URL
         if(!response.ok) throw new Error("HTTP error " + response.status);
 
         const data = await response.json();
 
-        // Update portal UI
-        updateStatus(data.message, data.file);
-        setStage(data.stage || 0);
-
-        // Store resume URL for Continue button
-        resumeUrl = data.resumeUrl || "";
+        // Only update if data exists
+        if(data){
+            updateStatus(data.message, data.file);
+            setStage(data.stage || 0);
+            resumeUrl = data.resumeUrl || "";
+        }
 
     } catch (err) {
-        console.log("Cannot reach n8n:", err);
+        console.error("Cannot reach n8n:", err);
         log("Cannot reach n8n: " + err.message);
     }
 }
@@ -90,5 +95,5 @@ async function checkWorkflow(){
 // Poll every 3 seconds
 setInterval(checkWorkflow, 3000);
 
-// Initial fetch
+// Initial fetch immediately
 checkWorkflow();
