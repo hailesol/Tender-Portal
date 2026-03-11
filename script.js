@@ -5,7 +5,7 @@ function log(message){
     const logContainer = document.getElementById("activityLog");
     const entry = document.createElement("div");
     entry.className = "log-entry";
-    entry.innerText = message;
+    entry.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
     logContainer.appendChild(entry);
     logContainer.scrollTop = logContainer.scrollHeight;
 }
@@ -14,6 +14,8 @@ function log(message){
 function setStage(stage){
     for(let i = 1; i <= 4; i++){
         const el = document.getElementById("stage"+i);
+        if(!el) continue;
+
         el.classList.remove("active");
         el.classList.remove("complete");
 
@@ -27,8 +29,12 @@ function setStage(stage){
 
 // ---- Update portal status ----
 function updateStatus(message, file){
-    document.getElementById("statusText").innerText = message;
-    document.getElementById("fileName").innerText = file;
+    const statusText = document.getElementById("statusText");
+    const fileName = document.getElementById("fileName");
+
+    if(statusText) statusText.innerText = message || "No status";
+    if(fileName) fileName.innerText = file || "No active folder";
+
     log(message);
 }
 
@@ -39,14 +45,20 @@ function continueWorkflow(){
         return;
     }
 
-    fetch(resumeUrl)
-        .then(() => log("User approved workflow"))
+    fetch(resumeUrl, { method: "POST" })
+        .then(res => {
+            if(res.ok){
+                log("User approved workflow");
+            } else {
+                log("Error approving workflow: " + res.status);
+            }
+        })
         .catch(err => console.error(err));
 }
 
 // ---- Abort workflow ----
 function abortWorkflow(){
-    log("Workflow aborted");
+    log("Workflow aborted by user");
     alert("Workflow aborted");
 }
 
@@ -57,19 +69,26 @@ setStage(0);
 // ---- Poll n8n Portal Status API ----
 async function checkWorkflow(){
     try {
-        const response = await fetch("https://hailesiq.app.n8n.cloud/webhook-test/workflow-status");
+        const response = await fetch("https://hailesiq.app.n8n.cloud/webhook/portal-status"); // GET workflow URL
+        if(!response.ok) throw new Error("HTTP error " + response.status);
+
         const data = await response.json();
 
+        // Update portal UI
         updateStatus(data.message, data.file);
-        setStage(data.stage);
+        setStage(data.stage || 0);
 
         // Store resume URL for Continue button
-        resumeUrl = data.resumeUrl;
+        resumeUrl = data.resumeUrl || "";
 
     } catch (err) {
         console.log("Cannot reach n8n:", err);
+        log("Cannot reach n8n: " + err.message);
     }
 }
 
 // Poll every 3 seconds
 setInterval(checkWorkflow, 3000);
+
+// Initial fetch
+checkWorkflow();
