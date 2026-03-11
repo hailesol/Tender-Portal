@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<title>AI Tender Automation</title>
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+
+<h1>AI Tender Automation</h1>
+<p class="subtitle">Tender Processing Control Portal</p>
+
+</header>
+
+<div class="grid">
+
+<div class="card status-card">
+
+<div class="status-header">
+
+<div class="pulse"></div>
+<p id="statusText">Waiting for tender upload...</p>
+
+</div>
+
+<p class="file-name" id="fileName">No active tender</p>
+
+</div>
+
+
+<div class="card stages">
+
+<h3>Workflow Progress</h3>
+
+<div class="stage-list">
+
+    <div class="stage" id="stage1">📂 New Folder Detected</div>
+    <div class="stage" id="stage2">⏳ Waiting For Files To Finish Uploading</div>
+    <div class="stage" id="stage3">🟢 Awaiting User Approval</div>
+    <div class="stage" id="stage4">📦 Moving Folder To Processing</div>
+    
+    </div>
+
+</div>
+
+
+<div class="card log">
+
+<h3>Activity Feed</h3>
+
+<div id="activityLog"></div>
+
+</div>
+
+</div>
+
+
+<div class="actions">
+
+<button class="btn continue" onclick="continueWorkflow()">Continue</button>
+<button class="btn abort" onclick="abortWorkflow()">Abort</button>
+
+</div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
