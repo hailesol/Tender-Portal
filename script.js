@@ -4,6 +4,8 @@ let lastMessage = "";
 // ---- Activity log ----
 function log(message){
     const logContainer = document.getElementById("activityLog");
+    if(!logContainer) return;
+
     const entry = document.createElement("div");
     entry.className = "log-entry";
     entry.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -29,16 +31,28 @@ function setStage(stage){
 }
 
 // ---- Update portal status ----
-function updateStatus(message, file){
+function updateStatus(message, file, newResumeUrl){
     const statusText = document.getElementById("statusText");
     const fileName = document.getElementById("fileName");
+    const continueBtn = document.getElementById("continueBtn");
 
     if(statusText) statusText.innerText = message || "No status";
     if(fileName) fileName.innerText = file || "No active folder";
 
+    // Only log new messages
     if(message && message !== lastMessage){
         log(message);
         lastMessage = message;
+    }
+
+    // Update resumeUrl and button link
+    resumeUrl = newResumeUrl || "";
+    if(continueBtn){
+        if(resumeUrl){
+            continueBtn.disabled = false;
+        } else {
+            continueBtn.disabled = true;
+        }
     }
 }
 
@@ -49,18 +63,9 @@ function continueWorkflow(){
         return;
     }
 
-    fetch(resumeUrl,{ method:"POST"})
-    .then(res=>{
-        if(res.ok){
-            log("User approved workflow");
-        } else {
-            log("Error approving workflow: " + res.status);
-        }
-    })
-    .catch(err=>{
-        console.error(err);
-        log("Error contacting workflow");
-    });
+    // Open the resume URL in a new tab
+    window.open(resumeUrl, "_blank");
+    log("Opened workflow resume page");
 }
 
 // ---- Abort workflow ----
@@ -70,37 +75,29 @@ function abortWorkflow(){
 }
 
 // ---- Initial portal state ----
-updateStatus("Waiting for workflow...", "No active folder");
+updateStatus("Waiting for workflow...", "No active folder", "");
 setStage(0);
 
-// ---- Poll n8n Portal Status ----
+// ---- Poll n8n Portal GET Workflow ----
 async function checkWorkflow(){
-    try{
-
+    try {
         const response = await fetch("https://hailesiq.app.n8n.cloud/webhook/portal-status");
-
-        if(!response.ok){
-            throw new Error("HTTP " + response.status);
-        }
+        if(!response.ok) throw new Error("HTTP error " + response.status);
 
         const data = await response.json();
 
         if(data){
-            updateStatus(data.message, data.file);
+            updateStatus(data.message, data.file, data.resumeUrl);
             setStage(data.stage || 0);
-            resumeUrl = data.resumeUrl || "";
         }
 
-    }catch(err){
-
-        console.error("Cannot reach n8n:", err);
-        log("Cannot reach n8n: " + err.message);
-
+    } catch (err) {
+        console.error("Cannot reach n8n or invalid JSON:", err);
+        log("Cannot reach n8n or invalid JSON");
     }
 }
 
-// ---- Poll every 3 seconds ----
-setInterval(checkWorkflow,3000);
-
-// ---- Run immediately on load ----
+// Poll every 3 seconds
+setInterval(checkWorkflow, 3000);
+// Initial fetch immediately
 checkWorkflow();
